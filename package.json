@@ -1,0 +1,22 @@
+{
+  "name": "riset-googletts",
+  "module": "index.ts",
+  "type": "module",
+  "scripts": {
+    "dev": "bun run --watch index.ts",
+    "build": "bun build index.ts",
+    "start": "node index.js",
+    "vercel-build": "bun build index.ts --outdir=. --target=node"
+  },
+  "dependencies": {
+    "@elysiajs/cors": "latest",
+    "elysia": "latest",
+    "google-auth-library": "^10.4.1"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

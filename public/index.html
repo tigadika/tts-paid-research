@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text to Speech App</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #10b981 0%, #3b82f6 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            min-width: 600px;
+            max-width: 600px;
+            width: 90%;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 2rem;
+            font-size: 2rem;
+        }
+
+        .input-group {
+            margin-bottom: 2rem;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 1rem;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 1rem;
+            resize: vertical;
+            min-height: 120px;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        textarea:focus {
+            border-color: #10b981;
+        }
+
+        button {
+            background: linear-gradient(135deg, #10b981 0%, #3b82f6 100%);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            margin: 0.5rem;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .button-row {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #ffffff;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 0.5rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .error {
+            color: #e74c3c;
+            margin-top: 1rem;
+            padding: 0.5rem;
+            background: #ffeaea;
+            border-radius: 5px;
+            border: 1px solid #e74c3c;
+        }
+
+        .success {
+            color: #27ae60;
+            margin-top: 1rem;
+        }
+
+        audio {
+            width: 100%;
+            margin-top: 1rem;
+        }
+
+        .settings-group {
+            margin-bottom: 2rem;
+            text-align: left;
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 10px;
+            border: 1px solid #e1e5e9;
+        }
+
+        .setting-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+            gap: 1rem;
+        }
+
+        .setting-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .setting-row label {
+            font-weight: 500;
+            color: #333;
+            min-width: 80px;
+        }
+
+        .setting-row input,
+        .setting-row select {
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 0.9rem;
+            flex: 1;
+            max-width: 200px;
+            background: white;
+        }
+
+        .setting-row input[type="range"] {
+            max-width: 150px;
+        }
+
+        .api-mode-buttons {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 2rem;
+        }
+
+        .api-mode-button {
+            padding: 0.75rem 1.5rem;
+            border: 2px solid #e1e5e9;
+            border-radius: 25px;
+            background: white;
+            color: #333;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            outline: none;
+        }
+
+        .api-mode-button:hover {
+            border-color: #10b981;
+            transform: translateY(-1px);
+        }
+
+        .api-mode-button.active {
+            background: linear-gradient(135deg, #10b981 0%, #3b82f6 100%);
+            color: white;
+            border-color: #10b981;
+        }
+
+        .api-mode-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .footer {
+            margin-top: 2rem;
+            font-size: 0.8rem;
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="container">
+            <h1>Text to Speech Example</h1>
+
+            <div class="input-group">
+                <textarea
+                    v-model="text"
+                    placeholder="Enter the text you want to convert to speech..."
+                    :disabled="loading"
+                ></textarea>
+            </div>
+
+            <div class="api-mode-buttons">
+                <button
+                    class="api-mode-button"
+                    :class="{ active: settings.apiMode === 'standard' }"
+                    :disabled="loading"
+                    @click="settings.apiMode = 'standard'; onApiModeChange()"
+                >
+                    Standard TTS
+                </button>
+                <button
+                    class="api-mode-button"
+                    :class="{ active: settings.apiMode === 'vertex' }"
+                    :disabled="loading"
+                    @click="settings.apiMode = 'vertex'; onApiModeChange()"
+                >
+                    Vertex AI (Gemini)
+                </button>
+                <button
+                    class="api-mode-button"
+                    :class="{ active: settings.apiMode === 'openai' }"
+                    :disabled="loading"
+                    @click="settings.apiMode = 'openai'; onApiModeChange()"
+                >
+                    OpenAI TTS
+                </button>
+            </div>
+
+            <div class="settings-group">
+
+                <div class="setting-row">
+                    <label>Language:</label>
+                    <select v-model="settings.languageCode" :disabled="loading">
+                        <option value="id-ID">Indonesian</option>
+                        <option value="en-US">English (US)</option>
+                        <option value="en-GB">English (UK)</option>
+                    </select>
+                </div>
+
+                <div class="setting-row">
+                    <label>Voice:</label>
+                    <select v-model="settings.voiceName" :disabled="loading">
+                        <template v-if="settings.apiMode === 'standard'">
+                            <option value="id-ID-Standard-A">Standard - A</option>
+                            <option value="id-ID-Standard-D">Standard - D</option>
+                            <option value="id-ID-Wavenet-A">WaveNet - A</option>
+                            <option value="id-ID-Wavenet-D">WaveNet - D</option>
+                            <option value="id-ID-Chirp3-HD-Despina">Chirp3 HD - Despina</option>
+                            <option value="id-ID-Chirp3-HD-Callirrhoe">Chirp3 HD - Callirrhoe</option>
+                            <option value="id-ID-Chirp3-HD-Erinome">Chirp3 HD - Erinome</option>
+                            <option value="id-ID-Chirp3-HD-Leda">Chirp3 HD - Leda</option>
+                        </template>
+                        <template v-else-if="settings.apiMode === 'vertex'">
+                            <option value="Achernar">Achernar</option>
+                            <option value="Aoede">Aoede</option>
+                            <option value="Callirrhoe">Callirrhoe</option>
+                            <option value="Despina">Despina</option>
+                            <option value="Laomedeia">Laomedeia</option>
+                            <option value="Leda">Leda</option>
+                            <option value="Sulafat">Sulafat</option>
+                            <option value="Zephyr">Zephyr</option>
+                        </template>
+                        <template v-else-if="settings.apiMode === 'openai'">
+                            <option value="coral">Coral</option>
+                            <option value="marin">Marin</option>
+                            <option value="nova">Nova</option>
+                            <option value="sage">Sage</option>
+                            <option value="shimmer">Shimmer</option>
+                        </template>
+                    </select>
+                </div>
+
+
+                <div class="setting-row">
+                    <label>Audio Format:</label>
+                    <select v-model="settings.audioEncoding" :disabled="loading">
+                        <option value="LINEAR16">LINEAR16 (WAV)</option>
+                        <option value="MP3">MP3</option>
+                    </select>
+                </div>
+
+
+                <div class="setting-row">
+                    <label>Speed: {{ settings.speakingRate }}x</label>
+                    <input type="range" v-model.number="settings.speakingRate" min="0.25" max="4.0" step="0.25" :disabled="loading" />
+                </div>
+            </div>
+
+            <div class="controls">
+                <div class="button-row">
+                    <button v-if="audioUrl" @click="playAudio" :disabled="loading">
+                        {{ isPlaying ? 'Pause' : 'Play' }}
+                    </button>
+
+                    <button v-if="audioUrl" @click="downloadAudio" :disabled="loading">
+                        Download
+                    </button>
+                </div>
+
+                <div class="button-row">
+                    <button @click="generateSpeech" :disabled="!text.trim() || loading">
+                        <span v-if="loading" class="loading"></span>
+                        {{ loading ? 'Generating...' : 'Generate Speech' }}
+                    </button>
+                </div>
+            </div>
+
+            <div v-if="error" class="error">
+                {{ error }}
+            </div>
+
+            <div v-if="success" class="success">
+                {{ success }}
+            </div>
+
+            <audio
+                v-if="audioUrl"
+                ref="audioPlayer"
+                :src="audioUrl"
+                @ended="isPlaying = false"
+                controls
+            ></audio>
+            <p class="footer">-Riset Radhea-</p>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref } = Vue;
+
+        createApp({
+            setup() {
+                const text = ref('Nomor Antrian A, 1. Atas nama Bapak, Radhea Amardika. Ke Loket, 3 B.');
+                const loading = ref(false);
+                const error = ref('');
+                const success = ref('');
+                const audioUrl = ref('');
+                const isPlaying = ref(false);
+                const audioPlayer = ref(null);
+
+                const settings = ref({
+                    apiMode: 'standard',
+                    languageCode: 'id-ID',
+                    voiceName: 'id-ID-Standard-A',
+                    audioEncoding: 'MP3',
+                    speakingRate: 1
+                });
+
+                const onApiModeChange = () => {
+                    // Reset voice when switching API modes
+                    if (settings.value.apiMode === 'standard') {
+                        settings.value.voiceName = 'id-ID-Standard-A';
+                    } else if (settings.value.apiMode === 'vertex') {
+                        settings.value.voiceName = 'Achernar';
+                    } else if (settings.value.apiMode === 'openai') {
+                        settings.value.voiceName = 'coral';
+                    }
+                };
+
+                const generateSpeech = async () => {
+                    if (!text.value.trim()) return;
+
+                    loading.value = true;
+                    error.value = '';
+                    success.value = '';
+
+                    try {
+                        const response = await fetch('/api/tts', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                text: text.value,
+                                ...settings.value
+                            }),
+                        });
+
+                        if (!response.ok) {
+                            const errorData = await response.json();
+                            throw new Error(errorData.error || 'Failed to generate speech');
+                        }
+
+                        const audioBlob = await response.blob();
+                        audioUrl.value = URL.createObjectURL(audioBlob);
+                        success.value = 'Speech generated successfully!';
+
+                        setTimeout(() => {
+                            playAudio();
+                        }, 100);
+
+                    } catch (err) {
+                        error.value = err.message || 'An error occurred while generating speech';
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+
+                const playAudio = () => {
+                    if (audioPlayer.value) {
+                        if (isPlaying.value) {
+                            audioPlayer.value.pause();
+                            isPlaying.value = false;
+                        } else {
+                            audioPlayer.value.play();
+                            isPlaying.value = true;
+                        }
+                    }
+                };
+
+                const downloadAudio = () => {
+                    if (audioUrl.value) {
+                        const a = document.createElement('a');
+                        a.href = audioUrl.value;
+                        a.download = settings.value.audioEncoding === 'LINEAR16' ? 'speech.wav' : 'speech.mp3';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                    }
+                };
+
+                const cleanup = () => {
+                    if (audioUrl.value) {
+                        URL.revokeObjectURL(audioUrl.value);
+                    }
+                };
+
+                return {
+                    text,
+                    loading,
+                    error,
+                    success,
+                    audioUrl,
+                    isPlaying,
+                    audioPlayer,
+                    settings,
+                    generateSpeech,
+                    playAudio,
+                    downloadAudio,
+                    cleanup,
+                    onApiModeChange
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
