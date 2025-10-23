@@ -6,7 +6,7 @@
     "dev": "bun run --watch index.ts",
     "build": "bun build index.ts",
     "start": "node index.js",
-    "vercel-build": "bun build index.ts --outdir=. --target=node"
+    "vercel-build": "echo 'Using TypeScript directly for Vercel'"
   },
   "dependencies": {
     "@elysiajs/cors": "latest",
@@ -14,9 +14,8 @@
     "google-auth-library": "^10.4.1"
   },
   "devDependencies": {
-    "@types/bun": "latest"
-  },
-  "peerDependencies": {
-    "typescript": "^5.0.0"
+    "@types/bun": "latest",
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0"
   }
 }
