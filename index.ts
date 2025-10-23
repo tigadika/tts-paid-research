@@ -8,7 +8,11 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 // Initialize Google Auth for service account
 const auth = new GoogleAuth({
-  scopes: ['https://www.googleapis.com/auth/cloud-platform']
+  scopes: ['https://www.googleapis.com/auth/cloud-platform'],
+  // For Railway deployment - use JSON from environment variable
+  credentials: process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON
+    ? JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON)
+    : undefined
 });
 
 const app = new Elysia()
@@ -227,13 +231,9 @@ const app = new Elysia()
       set.status = 500;
       return { error: "Internal server error" };
     }
-  });
+  })
+  .listen(3000);
 
-// For Vercel deployment
-export default app.fetch;
-
-// For local development
-if (import.meta.main) {
-  app.listen(3000);
-  console.log(`🦊 Elysia is running at localhost:3000`);
-}
+console.log(
+  `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`
+);
