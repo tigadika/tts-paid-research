@@ -227,9 +227,13 @@ const app = new Elysia()
       set.status = 500;
       return { error: "Internal server error" };
     }
-  })
-  .listen(3000);
+  });
 
-console.log(
-  `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`
-);
+// For Vercel deployment
+export default app.fetch;
+
+// For local development
+if (import.meta.main) {
+  app.listen(3000);
+  console.log(`🦊 Elysia is running at localhost:3000`);
+}
